@@ -1,0 +1,40 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Base de datos local
+*.db
+*.sqlite
+
+# Archivos compilados
+*.class
+*.war
+*.ear
+
+# Angular y Node.js
+node_modules/
+dist/
+*.tmp
+*.log
+
+# Configuraciones 
+*.properties
+*.settings
