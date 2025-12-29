@@ -36,7 +36,7 @@ public class AuthServlet extends HttpServlet {
         }
         
         AuthService authService = new AuthService();
-        Usuario usuario = authService.login(correo, password);
+         usuario = authService.login(correo, password);
         
         Gson gson = new Gson();
         String jsonResponse;

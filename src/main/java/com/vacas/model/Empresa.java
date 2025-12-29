@@ -28,3 +28,5 @@ public class Empresa {
     public double getComision() { return comision; }
     public void setComision(double comision) { this.comision = comision; }
 }
+
+    }

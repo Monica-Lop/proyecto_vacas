@@ -8,9 +8,9 @@ public class Transaccion {
     private int videojuegoId;
     private Date fechaCompra;
     private double precioPagado;
-    private double comisionAplicada; // porcentaje
-    private double montoComision;    // monto en dinero
-    private double montoEmpresa;     // monto que recibe la empresa
+    private double comisionAplicada; 
+    private double montoComision;    
+    private double montoEmpresa;     
     
     // Constructores
     public Transaccion() {}

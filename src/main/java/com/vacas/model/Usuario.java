@@ -5,26 +5,26 @@ public class Usuario {
     private String correo;
     private String password;
     private String nickname;
-    private String fechaNacimiento; // Simple: String
+    private String fechaNacimiento; 
     private String telefono;
     private String pais;
     private String tipo; // "ADMIN", "EMPRESA", "USUARIO"
     private boolean activo;
     private Integer empresaId;
     
-    // Constructor vacío (OBLIGATORIO para JavaBeans)
+    
     public Usuario() {}
     
-    // Constructor para crear rápido
+    
     public Usuario(String correo, String password, String nickname) {
         this.correo = correo;
         this.password = password;
         this.nickname = nickname;
-        this.tipo = "USUARIO"; // Por defecto
+        this.tipo = "USUARIO"; 
         this.activo = true;
     }
     
-    // GETTERS y SETTERS (genera con tu IDE o copia)
+    // GETTERS y SETTERS 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
     

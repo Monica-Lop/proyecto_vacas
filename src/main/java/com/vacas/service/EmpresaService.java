@@ -12,15 +12,13 @@ public class EmpresaService {
         this.empresaDAO = new EmpresaDAO();
     }
     
-    // Lógica para crear empresa (podría incluir validaciones)
+    // Lógica para crear empresa 
     public boolean crearEmpresa(Empresa empresa) {
-        // Validaciones básicas
         if (empresa.getNombre() == null || empresa.getNombre().trim().isEmpty()) {
             System.out.println("El nombre de la empresa es requerido");
             return false;
         }
         
-        // Puedes agregar más validaciones (ej: comisión no mayor a 100, etc.)
         if (empresa.getComision() < 0 || empresa.getComision() > 100) {
             System.out.println("La comisión debe estar entre 0 y 100");
             return false;
@@ -38,13 +36,10 @@ public class EmpresaService {
     }
     
     public boolean actualizarEmpresa(Empresa empresa) {
-        // Validaciones similares a crear
         return empresaDAO.actualizar(empresa);
     }
     
     public boolean eliminarEmpresa(int id) {
-        // Podríamos verificar si la empresa tiene videojuegos asociados antes de eliminar
-        // Por simplicidad, la eliminamos directamente
         return empresaDAO.eliminar(id);
     }
 }

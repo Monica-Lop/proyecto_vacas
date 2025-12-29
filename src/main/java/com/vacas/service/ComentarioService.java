@@ -22,20 +22,18 @@ public class ComentarioService {
     public Comentario crearComentario(int usuarioId, int videojuegoId, String texto, int calificacion, Integer comentarioPadreId) {
         System.out.println("💬 Creando comentario - Usuario: " + usuarioId + ", Videojuego: " + videojuegoId);
         
-        // Validar que usuario y videojuego existen
         if (usuarioDAO.buscarPorId(usuarioId) == null) {
-            System.out.println("❌ Usuario no encontrado");
+            System.out.println("Usuario no encontrado");
             return null;
         }
         
         if (videojuegoDAO.buscarPorId(videojuegoId) == null) {
-            System.out.println("❌ Videojuego no encontrado");
+            System.out.println("Videojuego no encontrado");
             return null;
         }
         
-        // Validar calificación
         if (calificacion < 1 || calificacion > 5) {
-            System.out.println("❌ Calificación debe ser entre 1 y 5");
+            System.out.println(" Calificación debe ser entre 1 y 5");
             return null;
         }
         
@@ -48,34 +46,30 @@ public class ComentarioService {
         boolean creado = comentarioDAO.crear(comentario);
         
         if (creado) {
-            System.out.println("✅ Comentario creado ID: " + comentario.getId());
+            System.out.println("Comentario creado ID: " + comentario.getId());
             return comentario;
         } else {
-            System.out.println("❌ Error al crear comentario");
+            System.out.println("Error al crear comentario");
             return null;
         }
     }
     
-    // OBTENER COMENTARIOS DE VIDEOJUEGO
     public List<Comentario> obtenerComentariosVideojuego(int videojuegoId) {
         return comentarioDAO.listarPorVideojuego(videojuegoId);
     }
     
-    // OBTENER RESPUESTAS
     public List<Comentario> obtenerRespuestas(int comentarioPadreId) {
         return comentarioDAO.listarRespuestas(comentarioPadreId);
     }
     
-    // OBTENER CALIFICACIÓN PROMEDIO
     public double obtenerCalificacionPromedio(int videojuegoId) {
         return comentarioDAO.obtenerCalificacionPromedio(videojuegoId);
     }
     
-    // MODERAR COMENTARIO (empresa puede ocultar)
     public boolean moderarComentario(int comentarioId, boolean visible) {
         Comentario comentario = comentarioDAO.obtenerPorId(comentarioId);
         if (comentario == null) {
-            System.out.println("❌ Comentario no encontrado");
+            System.out.println(" Comentario no encontrado");
             return false;
         }
         

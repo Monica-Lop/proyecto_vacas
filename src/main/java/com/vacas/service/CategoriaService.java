@@ -14,16 +14,14 @@ public class CategoriaService {
     
     // Crear categoría con validaciones
     public boolean crearCategoria(Categoria categoria) {
-        // Validaciones
         if (categoria.getNombre() == null || categoria.getNombre().trim().isEmpty()) {
-            System.out.println("❌ Nombre de categoría requerido");
+            System.out.println(" Nombre de categoría requerido");
             return false;
         }
         
-        // Verificar que no exista una categoría con el mismo nombre
         Categoria existente = categoriaDAO.buscarPorNombre(categoria.getNombre());
         if (existente != null) {
-            System.out.println("❌ Ya existe una categoría con ese nombre");
+            System.out.println("Ya existe una categoría con ese nombre");
             return false;
         }
         
@@ -39,7 +37,6 @@ public class CategoriaService {
     }
     
     public boolean actualizarCategoria(Categoria categoria) {
-        // Validaciones similares a crear
         if (categoria.getNombre() == null || categoria.getNombre().trim().isEmpty()) {
             return false;
         }
