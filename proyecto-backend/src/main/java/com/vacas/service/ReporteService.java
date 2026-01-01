@@ -2,34 +2,39 @@ package com.vacas.service;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 import com.vacas.dao.ReporteDAO;
+import com.vacas.dao.ReporteDAOImpl;
+import com.vacas.model.ReporteIngresosEmpresa;
+import com.vacas.model.ReporteRankingUsuarios;
+import com.vacas.model.ReporteVentasEmpresa;
+import com.vacas.model.Videojuego;
 
 public class ReporteService {
-    private ReporteDAO reporteDAO = new ReporteDAO();
     
-    public List<Map<String, Object>> obtenerReporteGananciasGlobales() {
+    private ReporteDAO reporteDAO;
+    
+    public ReporteService() {
+        this.reporteDAO = new ReporteDAOImpl();
+    }
+    
+    public double obtenerReporteGananciasGlobales() {
         return reporteDAO.obtenerReporteGananciasGlobales();
     }
     
-    public List<Map<String, Object>> obtenerTopVideojuegos(int limite) {
-        return reporteDAO.obtenerTopVideojuegos(limite);
+    public List<Videojuego> obtenerTopVideojuegos(int topN) {
+        return reporteDAO.obtenerTopVideojuegos(topN);
     }
     
-    public List<Map<String, Object>> obtenerReporteIngresosPorEmpresa() {
+    public List<ReporteIngresosEmpresa> obtenerReporteIngresosPorEmpresa() {
         return reporteDAO.obtenerReporteIngresosPorEmpresa();
     }
     
-    public List<Map<String, Object>> obtenerReporteVentasPorEmpresa(int empresaId, Date fechaInicio, Date fechaFin) {
-        return reporteDAO.obtenerReporteVentasPorEmpresa(empresaId, fechaInicio, fechaFin);
+    public List<ReporteVentasEmpresa> obtenerReporteVentasPorEmpresa(int idEmpresa, Date fechaInicio, Date fechaFin) {
+        return reporteDAO.obtenerReporteVentasPorEmpresa(idEmpresa, fechaInicio, fechaFin);
     }
     
-    public List<Map<String, Object>> obtenerRankingUsuarios() {
+    public List<ReporteRankingUsuarios> obtenerRankingUsuarios() {
         return reporteDAO.obtenerRankingUsuarios();
-    }
-    
-    public List<Map<String, Object>> obtenerVentasPorMes(int año) {
-        return reporteDAO.obtenerVentasPorMes(año);
     }
 }
