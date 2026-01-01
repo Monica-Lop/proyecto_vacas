@@ -13,61 +13,14 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
-@WebServlet("/comentarios")
+@WebServlet("/api/comentarios/*")
 public class ComentarioServlet extends HttpServlet {
     
-    private ComentarioService comentarioService;
-    private Gson gson;
+    private ComentarioService comentarioService = new ComentarioService();
+    private Gson gson = new Gson();
     
-    @Override
-    public void init() {
-        this.comentarioService = new ComentarioService();
-        this.gson = new Gson();
-    }
-    
-    // POST: Crear comentario o calificación
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
-            throws ServletException, IOException {
-        
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        PrintWriter out = response.getWriter();
-        
-        try {
-            int usuarioId = Integer.parseInt(request.getParameter("usuario_id"));
-            int videojuegoId = Integer.parseInt(request.getParameter("videojuego_id"));
-            String texto = request.getParameter("texto");
-            int calificacion = Integer.parseInt(request.getParameter("calificacion"));
-            
-            //Comentario padre 
-            String padreIdParam = request.getParameter("comentario_padre_id");
-            Integer comentarioPadreId = null;
-            if (padreIdParam != null && !padreIdParam.trim().isEmpty()) {
-                comentarioPadreId = Integer.parseInt(padreIdParam);
-            }
-            
-            Comentario comentario = comentarioService.crearComentario(usuarioId, videojuegoId, texto, calificacion, comentarioPadreId);
-            
-            if (comentario != null) {
-                out.print("{\"success\": true, \"message\": \"Comentario publicado\", " +
-                         "\"comentario_id\": " + comentario.getId() + "}");
-            } else {
-                response.setStatus(400);
-                out.print("{\"error\": \"No se pudo publicar el comentario\"}");
-            }
-            
-        } catch (Exception e) {
-            response.setStatus(500);
-            out.print("{\"error\": \"Error: " + e.getMessage() + "\"}");
-            e.printStackTrace();
-        }
-        
-        out.flush();
-    }
-    
-    // GET: Obtener comentarios de un videojuego o respuestas
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
@@ -76,42 +29,93 @@ public class ComentarioServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
         
-        String videojuegoIdParam = request.getParameter("videojuego_id");
-        String comentarioPadreIdParam = request.getParameter("comentario_padre_id");
+        String pathInfo = request.getPathInfo();
         
         try {
-            if (videojuegoIdParam != null) {
-                int videojuegoId = Integer.parseInt(videojuegoIdParam);
-                List<Comentario> comentarios = comentarioService.obtenerComentariosVideojuego(videojuegoId);
-                
-                double promedio = comentarioService.obtenerCalificacionPromedio(videojuegoId);
-                
-                out.print("{\"videojuego_id\": " + videojuegoId + ", " +
-                         "\"calificacion_promedio\": " + promedio + ", " +
-                         "\"comentarios\": " + gson.toJson(comentarios) + "}");
-                
-            } else if (comentarioPadreIdParam != null) {
-                // respuestas de un comentario
-                int comentarioPadreId = Integer.parseInt(comentarioPadreIdParam);
-                List<Comentario> respuestas = comentarioService.obtenerRespuestas(comentarioPadreId);
-                
-                out.print(gson.toJson(respuestas));
-                
-            } else {
-                response.setStatus(400);
-                out.print("{\"error\": \"Se requiere videojuego_id o comentario_padre_id\"}");
+            if (pathInfo == null || pathInfo.equals("/")) {
+                // GET /api/comentarios?videojuegoId=X
+                String videojuegoIdStr = request.getParameter("videojuegoId");
+                if (videojuegoIdStr != null) {
+                    int videojuegoId = Integer.parseInt(videojuegoIdStr);
+                    List<Comentario> comentarios = comentarioService.obtenerComentariosPorVideojuego(videojuegoId);
+                    out.print(gson.toJson(comentarios));
+                } else {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    out.print("{\"error\": \"Parámetro videojuegoId requerido\"}");
+                }
             }
-            
+        } catch (NumberFormatException e) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.print("{\"error\": \"ID inválido\"}");
         } catch (Exception e) {
-            response.setStatus(500);
-            out.print("{\"error\": \"Error: " + e.getMessage() + "\"}");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            out.print("{\"error\": \"Error interno del servidor\"}");
             e.printStackTrace();
         }
-        
         out.flush();
     }
     
-    // PUT: Moderar comentario 
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        PrintWriter out = response.getWriter();
+        
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("usuarioId") == null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print("{\"success\": false, \"message\": \"No autenticado\"}");
+            return;
+        }
+        
+        int usuarioId = (int) session.getAttribute("usuarioId");
+        
+        try {
+            String videojuegoIdStr = request.getParameter("videojuegoId");
+            String texto = request.getParameter("texto");
+            String comentarioPadreIdStr = request.getParameter("comentarioPadreId");
+            
+            if (videojuegoIdStr == null || texto == null || texto.trim().isEmpty()) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                out.print("{\"success\": false, \"message\": \"Datos incompletos\"}");
+                return;
+            }
+            
+            int videojuegoId = Integer.parseInt(videojuegoIdStr);
+            Integer comentarioPadreId = null;
+            
+            if (comentarioPadreIdStr != null && !comentarioPadreIdStr.isEmpty()) {
+                comentarioPadreId = Integer.parseInt(comentarioPadreIdStr);
+            }
+            
+            Comentario comentario = new Comentario();
+            comentario.setUsuarioId(usuarioId);
+            comentario.setVideojuegoId(videojuegoId);
+            comentario.setTexto(texto);
+            comentario.setVisible(true);
+            comentario.setComentarioPadreId(comentarioPadreId);
+            
+            boolean creado = comentarioService.crearComentario(comentario);
+            
+            if (creado) {
+                out.print("{\"success\": true, \"message\": \"Comentario publicado\"}");
+            } else {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                out.print("{\"success\": false, \"message\": \"Error al publicar comentario\"}");
+            }
+        } catch (NumberFormatException e) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.print("{\"success\": false, \"message\": \"ID inválido\"}");
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            out.print("{\"success\": false, \"message\": \"Error interno del servidor\"}");
+            e.printStackTrace();
+        }
+        out.flush();
+    }
+    
     @Override
     protected void doPut(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
@@ -120,55 +124,39 @@ public class ComentarioServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
         
-        try {
-            int comentarioId = Integer.parseInt(request.getParameter("comentario_id"));
-            boolean visible = Boolean.parseBoolean(request.getParameter("visible"));
-            
-            boolean moderado = comentarioService.moderarComentario(comentarioId, visible);
-            
-            if (moderado) {
-                out.print("{\"success\": true, \"message\": \"Comentario moderado\"}");
-            } else {
-                response.setStatus(400);
-                out.print("{\"error\": \"No se pudo moderar el comentario\"}");
-            }
-            
-        } catch (Exception e) {
-            response.setStatus(500);
-            out.print("{\"error\": \"Error: " + e.getMessage() + "\"}");
-            e.printStackTrace();
+        HttpSession session = request.getSession(false);
+        if (session == null || !"EMPRESA".equals(session.getAttribute("tipoUsuario"))) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print("{\"success\": false, \"message\": \"No autorizado\"}");
+            return;
         }
         
-        out.flush();
-    }
-    
-    // DELETE: Eliminar comentario
-    @Override
-    protected void doDelete(HttpServletRequest request, HttpServletResponse response) 
-            throws ServletException, IOException {
+        String pathInfo = request.getPathInfo();
         
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        PrintWriter out = response.getWriter();
-        
-        try {
-            int comentarioId = Integer.parseInt(request.getParameter("comentario_id"));
-            
-            boolean eliminado = comentarioService.eliminarComentario(comentarioId);
-            
-            if (eliminado) {
-                out.print("{\"success\": true, \"message\": \"Comentario eliminado\"}");
-            } else {
-                response.setStatus(400);
-                out.print("{\"error\": \"No se pudo eliminar el comentario\"}");
-            }
-            
-        } catch (Exception e) {
-            response.setStatus(500);
-            out.print("{\"error\": \"Error: " + e.getMessage() + "\"}");
-            e.printStackTrace();
+        if (pathInfo == null || !pathInfo.matches("/\\d+/ocultar")) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.print("{\"success\": false, \"message\": \"Ruta inválida\"}");
+            return;
         }
         
+        try {
+            int comentarioId = Integer.parseInt(pathInfo.split("/")[1]);
+            boolean ocultado = comentarioService.ocultarComentario(comentarioId);
+            
+            if (ocultado) {
+                out.print("{\"success\": true, \"message\": \"Comentario ocultado\"}");
+            } else {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                out.print("{\"success\": false, \"message\": \"Comentario no encontrado\"}");
+            }
+        } catch (NumberFormatException e) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.print("{\"success\": false, \"message\": \"ID inválido\"}");
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            out.print("{\"success\": false, \"message\": \"Error interno del servidor\"}");
+            e.printStackTrace();
+        }
         out.flush();
     }
 }

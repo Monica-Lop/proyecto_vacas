@@ -1,30 +1,33 @@
 package com.vacas.model;
 
+import java.util.Date;
+
 public class Usuario {
     private int id;
     private String correo;
     private String password;
     private String nickname;
-    private String fechaNacimiento; 
+    private Date fechaNacimiento;
     private String telefono;
     private String pais;
-    private String tipo; // "ADMIN", "EMPRESA", "USUARIO"
+    private byte[] avatar;
+    private String tipoUsuario;
     private boolean activo;
+    private boolean bibliotecaPublica;
+    private double saldoCartera;
     private Integer empresaId;
-    
+    private Date fechaCreacion;
     
     public Usuario() {}
     
-    
-    public Usuario(String correo, String password, String nickname) {
+    public Usuario(int id, String correo, String nickname, String tipoUsuario) {
+        this.id = id;
         this.correo = correo;
-        this.password = password;
         this.nickname = nickname;
-        this.tipo = "USUARIO"; 
-        this.activo = true;
+        this.tipoUsuario = tipoUsuario;
     }
     
-    // GETTERS y SETTERS 
+    // Getters y Setters
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
     
@@ -37,8 +40,8 @@ public class Usuario {
     public String getNickname() { return nickname; }
     public void setNickname(String nickname) { this.nickname = nickname; }
     
-    public String getFechaNacimiento() { return fechaNacimiento; }
-    public void setFechaNacimiento(String fechaNacimiento) { this.fechaNacimiento = fechaNacimiento; }
+    public Date getFechaNacimiento() { return fechaNacimiento; }
+    public void setFechaNacimiento(Date fechaNacimiento) { this.fechaNacimiento = fechaNacimiento; }
     
     public String getTelefono() { return telefono; }
     public void setTelefono(String telefono) { this.telefono = telefono; }
@@ -46,20 +49,24 @@ public class Usuario {
     public String getPais() { return pais; }
     public void setPais(String pais) { this.pais = pais; }
     
-    public String getTipo() { return tipo; }
-    public void setTipo(String tipo) { this.tipo = tipo; }
+    public byte[] getAvatar() { return avatar; }
+    public void setAvatar(byte[] avatar) { this.avatar = avatar; }
+    
+    public String getTipo() { return tipoUsuario; }
+    public void setTipo(String tipoUsuario) { this.tipoUsuario = tipoUsuario; }
     
     public boolean isActivo() { return activo; }
     public void setActivo(boolean activo) { this.activo = activo; }
     
+    public boolean isBibliotecaPublica() { return bibliotecaPublica; }
+    public void setBibliotecaPublica(boolean bibliotecaPublica) { this.bibliotecaPublica = bibliotecaPublica; }
+    
+    public double getSaldoCartera() { return saldoCartera; }
+    public void setSaldoCartera(double saldoCartera) { this.saldoCartera = saldoCartera; }
+    
     public Integer getEmpresaId() { return empresaId; }
     public void setEmpresaId(Integer empresaId) { this.empresaId = empresaId; }
-    public String toJsonSafe() {
-        return String.format(
-            "{\"id\":%d,\"correo\":\"%s\",\"nickname\":\"%s\",\"tipo\":\"%s\",\"empresaId\":%s}",
-            id, correo, nickname, tipo, (empresaId != null ? empresaId.toString() : "null")
-        );
-    }
+    
+    public Date getFechaCreacion() { return fechaCreacion; }
+    public void setFechaCreacion(Date fechaCreacion) { this.fechaCreacion = fechaCreacion; }
 }
-
-

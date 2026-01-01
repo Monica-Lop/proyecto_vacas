@@ -1,6 +1,5 @@
 package com.vacas.model;
 
-
 import java.util.Date;
 
 public class Videojuego {
@@ -8,23 +7,16 @@ public class Videojuego {
     private String titulo;
     private String descripcion;
     private double precio;
-    private int edadMinima;
     private String requisitos;
+    private int edadMinima;
     private boolean disponible;
     private Date fechaLanzamiento;
+    private double calificacionPromedio;
+    private boolean comentariosHabilitados;
     private int empresaId;
+    private Date fechaCreacion;
     
-    // Constructores
     public Videojuego() {}
-    
-    public Videojuego(String titulo, String descripcion, double precio, int empresaId) {
-        this.titulo = titulo;
-        this.descripcion = descripcion;
-        this.precio = precio;
-        this.empresaId = empresaId;
-        this.disponible = true;
-        this.edadMinima = 0;
-    }
     
     // Getters y Setters
     public int getId() { return id; }
@@ -39,11 +31,11 @@ public class Videojuego {
     public double getPrecio() { return precio; }
     public void setPrecio(double precio) { this.precio = precio; }
     
-    public int getEdadMinima() { return edadMinima; }
-    public void setEdadMinima(int edadMinima) { this.edadMinima = edadMinima; }
-    
     public String getRequisitos() { return requisitos; }
     public void setRequisitos(String requisitos) { this.requisitos = requisitos; }
+    
+    public int getEdadMinima() { return edadMinima; }
+    public void setEdadMinima(int edadMinima) { this.edadMinima = edadMinima; }
     
     public boolean isDisponible() { return disponible; }
     public void setDisponible(boolean disponible) { this.disponible = disponible; }
@@ -51,6 +43,15 @@ public class Videojuego {
     public Date getFechaLanzamiento() { return fechaLanzamiento; }
     public void setFechaLanzamiento(Date fechaLanzamiento) { this.fechaLanzamiento = fechaLanzamiento; }
     
+    public double getCalificacionPromedio() { return calificacionPromedio; }
+    public void setCalificacionPromedio(double calificacionPromedio) { this.calificacionPromedio = calificacionPromedio; }
+    
+    public boolean isComentariosHabilitados() { return comentariosHabilitados; }
+    public void setComentariosHabilitados(boolean comentariosHabilitados) { this.comentariosHabilitados = comentariosHabilitados; }
+    
     public int getEmpresaId() { return empresaId; }
     public void setEmpresaId(int empresaId) { this.empresaId = empresaId; }
+    
+    public Date getFechaCreacion() { return fechaCreacion; }
+    public void setFechaCreacion(Date fechaCreacion) { this.fechaCreacion = fechaCreacion; }
 }

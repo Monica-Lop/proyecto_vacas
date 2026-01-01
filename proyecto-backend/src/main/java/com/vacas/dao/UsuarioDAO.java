@@ -1,223 +1,149 @@
 package com.vacas.dao;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Date;
+
 import com.vacas.model.Usuario;
-import com.vacas.util.ConexionBD;
+import com.vacas.utils.DatabaseConnection;
 
 public class UsuarioDAO {
     
-    // BUSCAR usuario por correo 
-    public Usuario buscarPorCorreo(String correo) {
-        Usuario usuario = null;
-        String sql = "SELECT * FROM usuario WHERE correo = ?";
+    public Usuario login(String correo, String password) {
+        String sql = "SELECT id, correo, password, nickname, tipo_usuario, empresa_id, " +
+                    "saldo_cartera, fecha_nacimiento, telefono, pais, activo, " +
+                    "biblioteca_publica, fecha_creacion " +
+                    "FROM usuario WHERE correo = ? AND activo = TRUE";
         
-        try (Connection conn = ConexionBD.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            ps.setString(1, correo);
-            ResultSet rs = ps.executeQuery();
+            stmt.setString(1, correo);
+            ResultSet rs = stmt.executeQuery();
             
             if (rs.next()) {
-                usuario = new Usuario();
-                usuario.setId(rs.getInt("id"));
-                usuario.setCorreo(rs.getString("correo"));
-                usuario.setPassword(rs.getString("password"));
-                usuario.setNickname(rs.getString("nickname"));
-                usuario.setTipo(rs.getString("tipo"));
-                usuario.setActivo(rs.getBoolean("activo"));
-                usuario.setTelefono(rs.getString("telefono"));
-                usuario.setPais(rs.getString("pais"));
-
+                String hashedPassword = rs.getString("password");
+                
+                // Verificar con BCrypt
+                if (org.mindrot.jbcrypt.BCrypt.checkpw(password, hashedPassword)) {
+                    Usuario usuario = new Usuario();
+                    usuario.setId(rs.getInt("id"));
+                    usuario.setCorreo(rs.getString("correo"));
+                    usuario.setNickname(rs.getString("nickname"));
+                    usuario.setTipo(rs.getString("tipo_usuario"));
+                    usuario.setEmpresaId(rs.getInt("empresa_id"));
+                    usuario.setSaldoCartera(rs.getDouble("saldo_cartera"));
+                    usuario.setFechaNacimiento(rs.getDate("fecha_nacimiento"));
+                    usuario.setTelefono(rs.getString("telefono"));
+                    usuario.setPais(rs.getString("pais"));
+                    usuario.setActivo(rs.getBoolean("activo"));
+                    usuario.setBibliotecaPublica(rs.getBoolean("biblioteca_publica"));
+                    usuario.setFechaCreacion(rs.getDate("fecha_creacion"));
+                    return usuario;
+                }
             }
-            rs.close();
-            
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return usuario;
+        return null;
     }
     
-    // 2. CREAR nuevo usuario (registro)
-    public boolean crear(Usuario usuario) {
-        String sql = "INSERT INTO usuario (correo, password, nickname, fecha_nacimiento, tipo, activo) " +
-                     "VALUES (?, ?, ?, ?, ?, ?)";
+    public boolean registrar(Usuario usuario) {
+        String sql = "INSERT INTO usuario (correo, password, nickname, fecha_nacimiento, " +
+                    "telefono, pais, tipo_usuario, fecha_creacion) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, 'COMUN', CURDATE())";
         
-        try (Connection conn = ConexionBD.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            ps.setString(1, usuario.getCorreo());
-            ps.setString(2, usuario.getPassword());
-            ps.setString(3, usuario.getNickname());
-            ps.setString(4, usuario.getFechaNacimiento());
-            ps.setString(5, usuario.getTipo());
-            ps.setBoolean(6, usuario.isActivo());
+            stmt.setString(1, usuario.getCorreo());
+            stmt.setString(2, usuario.getPassword());
+            stmt.setString(3, usuario.getNickname());
+            stmt.setDate(4, new java.sql.Date(usuario.getFechaNacimiento().getTime()));
+            stmt.setString(5, usuario.getTelefono());
+            stmt.setString(6, usuario.getPais());
             
-            int filas = ps.executeUpdate();
-            return filas > 0; // true si se insertó
-            
+            return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
         }
+        return false;
     }
     
-    // 3. LISTAR todos los usuarios (para admin)
-    public List<Usuario> listarTodos() {
+    public boolean existeCorreo(String correo) {
+        String sql = "SELECT id FROM usuario WHERE correo = ?";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, correo);
+            ResultSet rs = stmt.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    public boolean existeNickname(String nickname) {
+        String sql = "SELECT id FROM usuario WHERE nickname = ?";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, nickname);
+            ResultSet rs = stmt.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    public List<Usuario> obtenerTodos() {
         List<Usuario> usuarios = new ArrayList<>();
-        String sql = "SELECT * FROM usuario WHERE activo = true";
+        String sql = "SELECT id, correo, nickname, tipo_usuario, empresa_id, " +
+                    "saldo_cartera, fecha_creacion, activo FROM usuario";
         
-        try (Connection conn = ConexionBD.getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             
             while (rs.next()) {
-                Usuario u = new Usuario();
-                u.setId(rs.getInt("id"));
-                u.setCorreo(rs.getString("correo"));
-                u.setNickname(rs.getString("nickname"));
-                u.setTipo(rs.getString("tipo"));
-                usuarios.add(u);
+                Usuario usuario = new Usuario();
+                usuario.setId(rs.getInt("id"));
+                usuario.setCorreo(rs.getString("correo"));
+                usuario.setNickname(rs.getString("nickname"));
+                usuario.setTipo(rs.getString("tipo_usuario"));
+                usuario.setEmpresaId(rs.getInt("empresa_id"));
+                usuario.setSaldoCartera(rs.getDouble("saldo_cartera"));
+                usuario.setFechaCreacion(rs.getDate("fecha_creacion"));
+                usuario.setActivo(rs.getBoolean("activo"));
+                usuarios.add(usuario);
             }
-            
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return usuarios;
     }
-
-       // REGISTRAR USUARIO COMÚN
-    public boolean registrarUsuarioComun(Usuario usuario) {
-        String sql = "INSERT INTO usuario (correo, password, nickname, fecha_nacimiento, " +
-                     "telefono, pais, tipo, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    
+    public boolean actualizarSaldo(int usuarioId, double nuevoSaldo) {
+        String sql = "UPDATE usuario SET saldo_cartera = ? WHERE id = ?";
         
-        try (Connection conn = ConexionBD.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            ps.setString(1, usuario.getCorreo());
-            ps.setString(2, usuario.getPassword()); // Texto plano temporalmente
-            ps.setString(3, usuario.getNickname());
-            ps.setDate(4, new java.sql.Date(usuario.getFechaNacimiento().getTime()));
-            ps.setString(5, usuario.getTelefono());
-            ps.setString(6, usuario.getPais());
-            ps.setString(7, "USUARIO"); // Tipo fijo para usuario común
-            ps.setBoolean(8, true);
+            stmt.setDouble(1, nuevoSaldo);
+            stmt.setInt(2, usuarioId);
             
-            int filas = ps.executeUpdate();
-            
-            if (filas > 0) {
-                ResultSet rs = ps.getGeneratedKeys();
-                if (rs.next()) {
-                    usuario.setId(rs.getInt(1));
-                }
-                rs.close();
-                System.out.println("Usuario común registrado: " + usuario.getCorreo());
-                return true;
-            }
-            
+            return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println(" Error registrando usuario común: " + e.getMessage());
             e.printStackTrace();
         }
         return false;
     }
-    
-    // REGISTRAR USUARIO EMPRESA (con empresa_id)
-    public boolean registrarUsuarioEmpresa(Usuario usuario, int empresaId) {
-        String sql = "INSERT INTO usuario (correo, password, nickname, fecha_nacimiento, " +
-                     "telefono, pais, tipo, activo, empresa_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        try (Connection conn = ConexionBD.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            
-            ps.setString(1, usuario.getCorreo());
-            ps.setString(2, usuario.getPassword());
-            ps.setString(3, usuario.getNickname());
-            ps.setDate(4, new java.sql.Date(usuario.getFechaNacimiento().getTime()));
-            ps.setString(5, usuario.getTelefono());
-            ps.setString(6, usuario.getPais());
-            ps.setString(7, "EMPRESA");
-            ps.setBoolean(8, true);
-            ps.setInt(9, empresaId);
-            
-            int filas = ps.executeUpdate();
-            
-            if (filas > 0) {
-                ResultSet rs = ps.getGeneratedKeys();
-                if (rs.next()) {
-                    usuario.setId(rs.getInt(1));
-                }
-                rs.close();
-                System.out.println("Usuario empresa registrado: " + usuario.getCorreo() + 
-                                  " para empresa ID: " + empresaId);
-                return true;
-            }
-            
-        } catch (SQLException e) {
-            System.err.println(" Error registrando usuario empresa: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return false;
-    }
-    
-    // REGISTRAR ADMINISTRADOR (solo desde código interno o con clave)
-    public boolean registrarAdministrador(Usuario usuario) {
-        String sql = "INSERT INTO usuario (correo, password, nickname, fecha_nacimiento, " +
-                     "telefono, pais, tipo, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        try (Connection conn = ConexionBD.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            
-            ps.setString(1, usuario.getCorreo());
-            ps.setString(2, usuario.getPassword());
-            ps.setString(3, usuario.getNickname());
-            ps.setDate(4, new java.sql.Date(usuario.getFechaNacimiento().getTime()));
-            ps.setString(5, usuario.getTelefono());
-            ps.setString(6, usuario.getPais());
-            ps.setString(7, "ADMIN");
-            ps.setBoolean(8, true);
-            
-            int filas = ps.executeUpdate();
-            
-            if (filas > 0) {
-                ResultSet rs = ps.getGeneratedKeys();
-                if (rs.next()) {
-                    usuario.setId(rs.getInt(1));
-                }
-                rs.close();
-                System.out.println(" Administrador registrado: " + usuario.getCorreo());
-                return true;
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Error registrando administrador: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return false;
-    }
-    
-    // VERIFICAR SI CORREO EXISTE
-    public boolean existeCorreo(String correo) {
-        String sql = "SELECT COUNT(*) as total FROM usuario WHERE correo = ?";
-        
-        try (Connection conn = ConexionBD.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            
-            ps.setString(1, correo);
-            ResultSet rs = ps.executeQuery();
-            
-            if (rs.next()) {
-                return rs.getInt("total") > 0;
-            }
-            
-            rs.close();
-            
-        } catch (SQLException e) {
-            System.err.println("Error verificando correo: " + e.getMessage());
-        }
-        return false;
-    }
-
 }

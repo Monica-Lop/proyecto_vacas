@@ -7,22 +7,9 @@ public class Comentario {
     private int usuarioId;
     private int videojuegoId;
     private String texto;
-    private int calificacion; 
-    private Date fecha;
+    private Date fechaComentario;
     private boolean visible;
     private Integer comentarioPadreId;
-    
-    // Constructores
-    public Comentario() {}
-    
-    public Comentario(int usuarioId, int videojuegoId, String texto, int calificacion) {
-        this.usuarioId = usuarioId;
-        this.videojuegoId = videojuegoId;
-        this.texto = texto;
-        this.calificacion = calificacion;
-        this.fecha = new Date();
-        this.visible = true;
-    }
     
     // Getters y Setters
     public int getId() { return id; }
@@ -37,16 +24,8 @@ public class Comentario {
     public String getTexto() { return texto; }
     public void setTexto(String texto) { this.texto = texto; }
     
-    public int getCalificacion() { return calificacion; }
-    public void setCalificacion(int calificacion) { 
-        if (calificacion < 1 || calificacion > 5) {
-            throw new IllegalArgumentException("La calificación debe ser entre 1 y 5");
-        }
-        this.calificacion = calificacion; 
-    }
-    
-    public Date getFecha() { return fecha; }
-    public void setFecha(Date fecha) { this.fecha = fecha; }
+    public Date getFechaComentario() { return fechaComentario; }
+    public void setFechaComentario(Date fechaComentario) { this.fechaComentario = fechaComentario; }
     
     public boolean isVisible() { return visible; }
     public void setVisible(boolean visible) { this.visible = visible; }

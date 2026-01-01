@@ -14,19 +14,12 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-@WebServlet("/categorias")
+@WebServlet("/api/categorias/*")
 public class CategoriaServlet extends HttpServlet {
     
-    private CategoriaService categoriaService;
-    private Gson gson;
+    private CategoriaService categoriaService = new CategoriaService();
+    private Gson gson = new Gson();
     
-    @Override
-    public void init() {
-        this.categoriaService = new CategoriaService();
-        this.gson = new Gson();
-    }
-    
-    // GET: Listar todas o una por ID
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
@@ -35,30 +28,17 @@ public class CategoriaServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
         
-        String idParam = request.getParameter("id");
-        
-        if (idParam != null && !idParam.trim().isEmpty()) {
-            // Obtener UNA categoría por ID
-            int id = Integer.parseInt(idParam);
-            Categoria categoria = categoriaService.obtenerCategoria(id);
-            
-            if (categoria != null) {
-                out.print(gson.toJson(categoria));
-            } else {
-                response.setStatus(404);
-                out.print("{\"error\": \"Categoría no encontrada\"}");
-            }
-            
-        } else {
-            // Listar TODAS las categorías
-            List<Categoria> categorias = categoriaService.listarCategorias();
+        try {
+            List<Categoria> categorias = categoriaService.obtenerTodas();
             out.print(gson.toJson(categorias));
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            out.print("{\"error\": \"Error interno del servidor\"}");
+            e.printStackTrace();
         }
-        
         out.flush();
     }
     
-    // POST: Crear nueva categoría
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
@@ -67,128 +47,51 @@ public class CategoriaServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
         
+        HttpSession session = request.getSession(false);
+        if (session == null || !"ADMIN".equals(session.getAttribute("tipoUsuario"))) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            out.print("{\"success\": false, \"message\": \"No autorizado\"}");
+            return;
+        }
+        
         try {
             String nombre = request.getParameter("nombre");
-            String descripcion = request.getParameter("descripcion");
-            String activaStr = request.getParameter("activa");
             
-            if (nombre == null || nombre.trim().isEmpty()) {
-                response.setStatus(400);
-                out.print("{\"error\": \"El nombre es requerido\"}");
+            if (nombre == null || nombre.isEmpty()) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                out.print("{\"success\": false, \"message\": \"El nombre es requerido\"}");
                 return;
             }
             
             Categoria categoria = new Categoria();
             categoria.setNombre(nombre);
-            categoria.setDescripcion(descripcion);
-            categoria.setActiva(activaStr == null || Boolean.parseBoolean(activaStr));
             
-            boolean creada = categoriaService.crearCategoria(categoria);
+            boolean creada = categoriaService.crear(categoria);
             
             if (creada) {
-                out.print("{\"success\": true, \"message\": \"Categoría creada exitosamente\", \"id\": " + categoria.getId() + "}");
+                out.print("{\"success\": true, \"message\": \"Categoría creada exitosamente\"}");
             } else {
-                response.setStatus(500);
-                out.print("{\"error\": \"No se pudo crear la categoría\"}");
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                out.print("{\"success\": false, \"message\": \"Error al crear categoría\"}");
             }
-            
         } catch (Exception e) {
-            response.setStatus(500);
-            out.print("{\"error\": \"Error: " + e.getMessage() + "\"}");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            out.print("{\"success\": false, \"message\": \"Error interno del servidor\"}");
             e.printStackTrace();
         }
-        
         out.flush();
     }
+}
+
+// CategoriaService.java (añadir al archivo de servicios)
+class CategoriaService {
+    private com.vacas.dao.CategoriaDAO categoriaDAO = new com.vacas.dao.CategoriaDAO();
     
-    // PUT: Actualizar categoría
-    @Override
-    protected void doPut(HttpServletRequest request, HttpServletResponse response) 
-            throws ServletException, IOException {
-        
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        PrintWriter out = response.getWriter();
-        
-        try {
-            String idParam = request.getParameter("id");
-            String nombre = request.getParameter("nombre");
-            String descripcion = request.getParameter("descripcion");
-            String activaStr = request.getParameter("activa");
-            
-            if (idParam == null || idParam.trim().isEmpty()) {
-                response.setStatus(400);
-                out.print("{\"error\": \"ID de categoría requerido\"}");
-                return;
-            }
-            
-            int id = Integer.parseInt(idParam);
-            Categoria categoria = categoriaService.obtenerCategoria(id);
-            
-            if (categoria == null) {
-                response.setStatus(404);
-                out.print("{\"error\": \"Categoría no encontrada\"}");
-                return;
-            }
-            
-            if (nombre != null) categoria.setNombre(nombre);
-            if (descripcion != null) categoria.setDescripcion(descripcion);
-            if (activaStr != null) {
-                categoria.setActiva(Boolean.parseBoolean(activaStr));
-            }
-            
-            boolean actualizada = categoriaService.actualizarCategoria(categoria);
-            
-            if (actualizada) {
-                out.print("{\"success\": true, \"message\": \"Categoría actualizada\"}");
-            } else {
-                response.setStatus(500);
-                out.print("{\"error\": \"No se pudo actualizar la categoría\"}");
-            }
-            
-        } catch (Exception e) {
-            response.setStatus(500);
-            out.print("{\"error\": \"Error: " + e.getMessage() + "\"}");
-            e.printStackTrace();
-        }
-        
-        out.flush();
+    public List<Categoria> obtenerTodas() {
+        return categoriaDAO.obtenerTodas();
     }
     
-    // DELETE: Eliminar categoría (soft delete)
-    @Override
-    protected void doDelete(HttpServletRequest request, HttpServletResponse response) 
-            throws ServletException, IOException {
-        
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        PrintWriter out = response.getWriter();
-        
-        try {
-            String idParam = request.getParameter("id");
-            
-            if (idParam == null || idParam.trim().isEmpty()) {
-                response.setStatus(400);
-                out.print("{\"error\": \"ID de categoría requerido\"}");
-                return;
-            }
-            
-            int id = Integer.parseInt(idParam);
-            boolean eliminada = categoriaService.eliminarCategoria(id);
-            
-            if (eliminada) {
-                out.print("{\"success\": true, \"message\": \"Categoría eliminada\"}");
-            } else {
-                response.setStatus(500);
-                out.print("{\"error\": \"No se pudo eliminar la categoría\"}");
-            }
-            
-        } catch (Exception e) {
-            response.setStatus(500);
-            out.print("{\"error\": \"Error: " + e.getMessage() + "\"}");
-            e.printStackTrace();
-        }
-        
-        out.flush();
+    public boolean crear(Categoria categoria) {
+        return categoriaDAO.crear(categoria);
     }
 }

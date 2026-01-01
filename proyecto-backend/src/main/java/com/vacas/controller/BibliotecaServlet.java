@@ -1,27 +1,22 @@
 package com.vacas.controller;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-
 import com.google.gson.Gson;
-import com.vacas.model.Transaccion;
-import com.vacas.service.TransaccionService;
-
+import com.vacas.model.Biblioteca;
+import com.vacas.service.BibliotecaService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.List;
 
-@WebServlet("/api/transacciones/*")
-public class TransaccionServlet extends HttpServlet {
+@WebServlet("/api/biblioteca/*")
+public class BibliotecaServlet extends HttpServlet {
     
-    private TransaccionService transaccionService = new TransaccionService();
+    private BibliotecaService bibliotecaService = new BibliotecaService();
     private Gson gson = new Gson();
     
     @Override
@@ -40,18 +35,10 @@ public class TransaccionServlet extends HttpServlet {
         }
         
         int usuarioId = (int) session.getAttribute("usuarioId");
-        String pathInfo = request.getPathInfo();
         
         try {
-            if (pathInfo == null || pathInfo.equals("/")) {
-                // GET /api/transacciones - Historial del usuario
-                List<Transaccion> transacciones = transaccionService.obtenerHistorialUsuario(usuarioId);
-                out.print(gson.toJson(transacciones));
-            } else if (pathInfo.equals("/comisiones")) {
-                // GET /api/transacciones/comisiones - Total de comisiones
-                double totalComisiones = transaccionService.obtenerTotalComisiones();
-                out.print("{\"totalComisiones\": " + totalComisiones + "}");
-            }
+            List<Biblioteca> biblioteca = bibliotecaService.obtenerBibliotecaUsuario(usuarioId);
+            out.print(gson.toJson(biblioteca));
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             out.print("{\"error\": \"Error interno del servidor\"}");
@@ -79,38 +66,33 @@ public class TransaccionServlet extends HttpServlet {
         
         try {
             String videojuegoIdStr = request.getParameter("videojuegoId");
-            String fechaCompraStr = request.getParameter("fechaCompra");
             
-            if (videojuegoIdStr == null || videojuegoIdStr.isEmpty()) {
+            if (videojuegoIdStr == null) {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 out.print("{\"success\": false, \"message\": \"ID de videojuego requerido\"}");
                 return;
             }
             
             int videojuegoId = Integer.parseInt(videojuegoIdStr);
-            Date fechaCompra;
             
-            if (fechaCompraStr != null && !fechaCompraStr.isEmpty()) {
-                // Si se proporciona fecha, usarla (para simulación)
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                fechaCompra = sdf.parse(fechaCompraStr);
-            } else {
-                // Si no, usar fecha actual
-                fechaCompra = new Date();
+            // Verificar si ya tiene el juego
+            if (bibliotecaService.tieneJuego(usuarioId, videojuegoId)) {
+                out.print("{\"success\": false, \"message\": \"Ya tienes este juego en tu biblioteca\"}");
+                return;
             }
             
-            // Realizar compra
-            boolean compraExitosa = transaccionService.comprarVideojuego(usuarioId, videojuegoId, fechaCompra);
+            Biblioteca biblioteca = new Biblioteca();
+            biblioteca.setUsuarioId(usuarioId);
+            biblioteca.setVideojuegoId(videojuegoId);
             
-            if (compraExitosa) {
-                out.print("{\"success\": true, \"message\": \"Compra realizada exitosamente\"}");
+            boolean agregado = bibliotecaService.agregarJuego(biblioteca);
+            
+            if (agregado) {
+                out.print("{\"success\": true, \"message\": \"Juego agregado a tu biblioteca\"}");
             } else {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                out.print("{\"success\": false, \"message\": \"No se pudo completar la compra\"}");
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                out.print("{\"success\": false, \"message\": \"Error al agregar juego\"}");
             }
-        } catch (ParseException e) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            out.print("{\"success\": false, \"message\": \"Formato de fecha inválido\"}");
         } catch (NumberFormatException e) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             out.print("{\"success\": false, \"message\": \"ID inválido\"}");

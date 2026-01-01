@@ -2,7 +2,9 @@ package com.vacas.controller;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 import com.google.gson.Gson;
@@ -15,19 +17,12 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-@WebServlet("/videojuegos")
+@WebServlet("/api/videojuegos/*")
 public class VideojuegoServlet extends HttpServlet {
     
-    private VideojuegoService videojuegoService;
-    private Gson gson;
+    private VideojuegoService videojuegoService = new VideojuegoService();
+    private Gson gson = new Gson();
     
-    @Override
-    public void init() {
-        this.videojuegoService = new VideojuegoService();
-        this.gson = new Gson();
-    }
-    
-    // GET: Listar todos, por ID o por empresa
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
@@ -36,34 +31,47 @@ public class VideojuegoServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
         
-        String idParam = request.getParameter("id");
-        String empresaIdParam = request.getParameter("empresaId");
+        String pathInfo = request.getPathInfo();
         
-        if (idParam != null && !idParam.trim().isEmpty()) {
-            int id = Integer.parseInt(idParam);
-            Videojuego videojuego = videojuegoService.obtenerVideojuego(id);
-            
-            if (videojuego != null) {
-                out.print(gson.toJson(videojuego));
-            } else {
-                response.setStatus(404);
-                out.print("{\"error\": \"Videojuego no encontrado\"}");
+        try {
+            if (pathInfo == null || pathInfo.equals("/")) {
+                // GET /api/videojuegos - Listar todos
+                List<Videojuego> videojuegos = videojuegoService.obtenerTodos();
+                out.print(gson.toJson(videojuegos));
+            } else if (pathInfo.matches("/\\d+")) {
+                // GET /api/videojuegos/{id} - Obtener por ID
+                int id = Integer.parseInt(pathInfo.substring(1));
+                Videojuego videojuego = videojuegoService.obtenerPorId(id);
+                
+                if (videojuego != null) {
+                    out.print(gson.toJson(videojuego));
+                } else {
+                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    out.print("{\"error\": \"Videojuego no encontrado\"}");
+                }
+            } else if (pathInfo.equals("/empresa")) {
+                // GET /api/videojuegos/empresa?empresaId=X
+                String empresaIdStr = request.getParameter("empresaId");
+                if (empresaIdStr != null) {
+                    int empresaId = Integer.parseInt(empresaIdStr);
+                    List<Videojuego> videojuegos = videojuegoService.obtenerPorEmpresa(empresaId);
+                    out.print(gson.toJson(videojuegos));
+                } else {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    out.print("{\"error\": \"Parámetro empresaId requerido\"}");
+                }
             }
-            
-        } else if (empresaIdParam != null && !empresaIdParam.trim().isEmpty()) {
-            int empresaId = Integer.parseInt(empresaIdParam);
-            List<Videojuego> videojuegos = videojuegoService.listarPorEmpresa(empresaId);
-            out.print(gson.toJson(videojuegos));
-            
-        } else {
-            List<Videojuego> videojuegos = videojuegoService.listarVideojuegos();
-            out.print(gson.toJson(videojuegos));
+        } catch (NumberFormatException e) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.print("{\"error\": \"ID inválido\"}");
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            out.print("{\"error\": \"Error interno del servidor\"}");
+            e.printStackTrace();
         }
-        
         out.flush();
     }
     
-    // POST: Crear nuevo videojuego
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
@@ -73,131 +81,66 @@ public class VideojuegoServlet extends HttpServlet {
         PrintWriter out = response.getWriter();
         
         try {
+            // Obtener parámetros del formulario
             String titulo = request.getParameter("titulo");
             String descripcion = request.getParameter("descripcion");
             String precioStr = request.getParameter("precio");
-            String edadMinimaStr = request.getParameter("edadMinima");
             String requisitos = request.getParameter("requisitos");
-            String disponibleStr = request.getParameter("disponible");
+            String edadMinimaStr = request.getParameter("edadMinima");
             String fechaLanzamientoStr = request.getParameter("fechaLanzamiento");
             String empresaIdStr = request.getParameter("empresaId");
             
-            if (titulo == null || titulo.trim().isEmpty() || 
-                precioStr == null || empresaIdStr == null) {
-                response.setStatus(400);
-                out.print("{\"error\": \"Título, precio y empresa son requeridos\"}");
+            // Validar parámetros requeridos
+            if (titulo == null || descripcion == null || precioStr == null || 
+                requisitos == null || edadMinimaStr == null || 
+                fechaLanzamientoStr == null || empresaIdStr == null) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                out.print("{\"success\": false, \"message\": \"Todos los campos son requeridos\"}");
                 return;
             }
             
-            // Crear  Videojuego
+            // Convertir tipos
+            double precio = Double.parseDouble(precioStr);
+            int edadMinima = Integer.parseInt(edadMinimaStr);
+            int empresaId = Integer.parseInt(empresaIdStr);
+            
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            Date fechaLanzamiento = sdf.parse(fechaLanzamientoStr);
+            
+            // Crear objeto Videojuego
             Videojuego videojuego = new Videojuego();
             videojuego.setTitulo(titulo);
             videojuego.setDescripcion(descripcion);
-            videojuego.setPrecio(Double.parseDouble(precioStr));
-            
-            if (edadMinimaStr != null && !edadMinimaStr.trim().isEmpty()) {
-                videojuego.setEdadMinima(Integer.parseInt(edadMinimaStr));
-            }
-            
+            videojuego.setPrecio(precio);
             videojuego.setRequisitos(requisitos);
-            videojuego.setDisponible(disponibleStr == null || Boolean.parseBoolean(disponibleStr));
+            videojuego.setEdadMinima(edadMinima);
+            videojuego.setFechaLanzamiento(fechaLanzamiento);
+            videojuego.setEmpresaId(empresaId);
+            videojuego.setDisponible(true);
             
-            if (fechaLanzamientoStr != null && !fechaLanzamientoStr.trim().isEmpty()) {
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                videojuego.setFechaLanzamiento(sdf.parse(fechaLanzamientoStr));
-            }
-            
-            videojuego.setEmpresaId(Integer.parseInt(empresaIdStr));
-            
-            // Guardar
+            // Guardar en base de datos
             boolean creado = videojuegoService.crearVideojuego(videojuego);
             
             if (creado) {
-                out.print("{\"success\": true, \"message\": \"Videojuego creado exitosamente\", \"id\": " + videojuego.getId() + "}");
+                out.print("{\"success\": true, \"message\": \"Videojuego creado exitosamente\"}");
             } else {
-                response.setStatus(500);
-                out.print("{\"error\": \"No se pudo crear el videojuego\"}");
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                out.print("{\"success\": false, \"message\": \"Error al crear videojuego\"}");
             }
-            
+        } catch (ParseException e) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.print("{\"success\": false, \"message\": \"Formato de fecha inválido\"}");
+        } catch (NumberFormatException e) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.print("{\"success\": false, \"message\": \"Formato numérico inválido\"}");
         } catch (Exception e) {
-            response.setStatus(500);
-            out.print("{\"error\": \"Error: " + e.getMessage() + "\"}");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            out.print("{\"success\": false, \"message\": \"Error interno del servidor\"}");
             e.printStackTrace();
         }
-        
         out.flush();
     }
     
-    // PUT: Actualizar videojuego
-    @Override
-    protected void doPut(HttpServletRequest request, HttpServletResponse response) 
-            throws ServletException, IOException {
-        
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        PrintWriter out = response.getWriter();
-        
-        try {
-            String idParam = request.getParameter("id");
-            String titulo = request.getParameter("titulo");
-            String descripcion = request.getParameter("descripcion");
-            String precioStr = request.getParameter("precio");
-            String edadMinimaStr = request.getParameter("edadMinima");
-            String requisitos = request.getParameter("requisitos");
-            String disponibleStr = request.getParameter("disponible");
-            String fechaLanzamientoStr = request.getParameter("fechaLanzamiento");
-            
-            if (idParam == null || idParam.trim().isEmpty()) {
-                response.setStatus(400);
-                out.print("{\"error\": \"ID de videojuego requerido\"}");
-                return;
-            }
-            
-            int id = Integer.parseInt(idParam);
-            Videojuego videojuego = videojuegoService.obtenerVideojuego(id);
-            
-            if (videojuego == null) {
-                response.setStatus(404);
-                out.print("{\"error\": \"Videojuego no encontrado\"}");
-                return;
-            }
-            
-            if (titulo != null) videojuego.setTitulo(titulo);
-            if (descripcion != null) videojuego.setDescripcion(descripcion);
-            if (precioStr != null && !precioStr.trim().isEmpty()) {
-                videojuego.setPrecio(Double.parseDouble(precioStr));
-            }
-            if (edadMinimaStr != null && !edadMinimaStr.trim().isEmpty()) {
-                videojuego.setEdadMinima(Integer.parseInt(edadMinimaStr));
-            }
-            if (requisitos != null) videojuego.setRequisitos(requisitos);
-            if (disponibleStr != null) {
-                videojuego.setDisponible(Boolean.parseBoolean(disponibleStr));
-            }
-            if (fechaLanzamientoStr != null && !fechaLanzamientoStr.trim().isEmpty()) {
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                videojuego.setFechaLanzamiento(sdf.parse(fechaLanzamientoStr));
-            }
-            
-            boolean actualizado = videojuegoService.actualizarVideojuego(videojuego);
-            
-            if (actualizado) {
-                out.print("{\"success\": true, \"message\": \"Videojuego actualizado\"}");
-            } else {
-                response.setStatus(500);
-                out.print("{\"error\": \"No se pudo actualizar el videojuego\"}");
-            }
-            
-        } catch (Exception e) {
-            response.setStatus(500);
-            out.print("{\"error\": \"Error: " + e.getMessage() + "\"}");
-            e.printStackTrace();
-        }
-        
-        out.flush();
-    }
-    
-    // DELETE: Eliminar videojuego (soft delete)
     @Override
     protected void doDelete(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
@@ -206,31 +149,29 @@ public class VideojuegoServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
         
-        try {
-            String idParam = request.getParameter("id");
-            
-            if (idParam == null || idParam.trim().isEmpty()) {
-                response.setStatus(400);
-                out.print("{\"error\": \"ID de videojuego requerido\"}");
-                return;
-            }
-            
-            int id = Integer.parseInt(idParam);
-            boolean eliminado = videojuegoService.eliminarVideojuego(id);
-            
-            if (eliminado) {
-                out.print("{\"success\": true, \"message\": \"Videojuego eliminado\"}");
-            } else {
-                response.setStatus(500);
-                out.print("{\"error\": \"No se pudo eliminar el videojuego\"}");
-            }
-            
-        } catch (Exception e) {
-            response.setStatus(500);
-            out.print("{\"error\": \"Error: " + e.getMessage() + "\"}");
-            e.printStackTrace();
+        String pathInfo = request.getPathInfo();
+        
+        if (pathInfo == null || !pathInfo.matches("/\\d+")) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.print("{\"success\": false, \"message\": \"ID inválido\"}");
+            return;
         }
         
+        try {
+            int id = Integer.parseInt(pathInfo.substring(1));
+            boolean suspendido = videojuegoService.suspenderVenta(id);
+            
+            if (suspendido) {
+                out.print("{\"success\": true, \"message\": \"Venta suspendida exitosamente\"}");
+            } else {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                out.print("{\"success\": false, \"message\": \"Videojuego no encontrado\"}");
+            }
+        } catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            out.print("{\"success\": false, \"message\": \"Error interno del servidor\"}");
+            e.printStackTrace();
+        }
         out.flush();
     }
 }

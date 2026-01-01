@@ -3,121 +3,83 @@ package com.vacas.service;
 import java.util.Date;
 import java.util.List;
 
-import com.vacas.dao.*;
-import com.vacas.model.*;
+import com.vacas.dao.TransaccionDAO;
+import com.vacas.dao.UsuarioDAO;
+import com.vacas.dao.VideojuegoDAO;
+import com.vacas.model.Transaccion;
+import com.vacas.model.Usuario;
+import com.vacas.model.Videojuego;
 
 public class TransaccionService {
     private TransaccionDAO transaccionDAO;
-    private CarteraDAO carteraDAO;
-    private VideojuegoDAO videojuegoDAO;
     private UsuarioDAO usuarioDAO;
-    private EmpresaDAO empresaDAO;
+    private VideojuegoDAO videojuegoDAO;
     
     public TransaccionService() {
         this.transaccionDAO = new TransaccionDAO();
-        this.carteraDAO = new CarteraDAO();
-        this.videojuegoDAO = new VideojuegoDAO();
         this.usuarioDAO = new UsuarioDAO();
-        this.empresaDAO = new EmpresaDAO();
+        this.videojuegoDAO = new VideojuegoDAO();
     }
     
-    // REALIZAR COMPRA
-    public Transaccion realizarCompra(int usuarioId, int videojuegoId) {
-        System.out.println(" Intentando compra - Usuario: " + usuarioId + ", Videojuego: " + videojuegoId);
+    public boolean comprarVideojuego(int usuarioId, int videojuegoId, Date fechaCompra) {
+        Usuario usuario = obtenerUsuarioPorId(usuarioId);
+        Videojuego videojuego = videojuegoDAO.obtenerPorId(videojuegoId);
         
-        Usuario usuario = usuarioDAO.buscarPorId(usuarioId);
-        Videojuego videojuego = videojuegoDAO.buscarPorId(videojuegoId);
-        
-        if (usuario == null || videojuego == null) {
-            System.out.println(" Usuario o videojuego no encontrado");
-            return null;
+        if (usuario == null || videojuego == null || !videojuego.isDisponible()) {
+            return false;
         }
         
-        if (!videojuego.isDisponible()) {
-            System.out.println(" Videojuego no disponible");
-            return null;
-        }
-        
+        // Verificar edad
         if (!validarEdad(usuario, videojuego)) {
-            System.out.println(" Usuario no cumple edad mínima");
-            return null;
-        }
-        
-        Cartera cartera = carteraDAO.obtenerPorUsuario(usuarioId);
-        if (cartera == null || cartera.getSaldo() < videojuego.getPrecio()) {
-            System.out.println(" Saldo insuficiente");
-            return null;
-        }
-        
-        double comision = obtenerComision(videojuego.getEmpresaId());
-        
-        Transaccion transaccion = new Transaccion(
-            usuarioId, 
-            videojuegoId, 
-            videojuego.getPrecio(), 
-            comision
-        );
-        
-        boolean saldoDescontado = carteraDAO.descontarSaldo(usuarioId, videojuego.getPrecio());
-        if (!saldoDescontado) {
-            System.out.println(" Error al descontar saldo");
-            return null;
-        }
-        
-        boolean transaccionCreada = transaccionDAO.crear(transaccion);
-        if (!transaccionCreada) {
-            System.out.println("Error al crear transacción");
-            carteraDAO.recargarSaldo(usuarioId, videojuego.getPrecio());
-            return null;
-        }
-        
-        System.out.println("Compra exitosa - Transacción ID: " + transaccion.getId());
-        return transaccion;
-    }
-    
-    // VALIDAR EDAD
-    private boolean validarEdad(Usuario usuario, Videojuego videojuego) {
-        try {
-            // Calcular edad .......
-            String fechaNac = usuario.getFechaNacimiento();
-            int añoNacimiento = Integer.parseInt(fechaNac.substring(0, 4));
-            int añoActual = new Date().getYear() + 1900; //....
-            int edad = añoActual - añoNacimiento;
-            
-            return edad >= videojuego.getEdadMinima();
-        } catch (Exception e) {
-            return false;
-        }
-    }
-    
-    // OBTENER COMISIÓN
-    private double obtenerComision(int empresaId) {
-        // ....
-        return 15.0; 
-    }
-    
-    // RECARGAR CARTERA
-    public boolean recargarCartera(int usuarioId, double monto) {
-        if (monto <= 0) {
-            System.out.println(" Monto debe ser positivo");
             return false;
         }
         
-        boolean recargado = carteraDAO.recargarSaldo(usuarioId, monto);
-        if (recargado) {
-            System.out.println("Recarga exitosa - Usuario: " + usuarioId + ", Monto: $" + monto);
+        // Verificar saldo
+        if (usuario.getSaldoCartera() < videojuego.getPrecio()) {
+            return false;
         }
-        return recargado;
+        
+        // Calcular comisión (15% por defecto)
+        double comisionPorcentaje = 15.0;
+        double montoComision = videojuego.getPrecio() * (comisionPorcentaje / 100);
+        double precioNeto = videojuego.getPrecio() - montoComision;
+        
+        // Crear transacción
+        Transaccion transaccion = new Transaccion();
+        transaccion.setUsuarioId(usuarioId);
+        transaccion.setVideojuegoId(videojuegoId);
+        transaccion.setFechaCompra(fechaCompra);
+        transaccion.setPrecioPagado(videojuego.getPrecio());
+        transaccion.setMontoComision(montoComision);
+        transaccion.setTipoComision("GLOBAL");
+        
+        // Actualizar saldo del usuario
+        double nuevoSaldo = usuario.getSaldoCartera() - videojuego.getPrecio();
+        usuarioDAO.actualizarSaldo(usuarioId, nuevoSaldo);
+        
+        // Registrar transacción
+        return transaccionDAO.crear(transaccion);
     }
     
-    // OBTENER HISTORIAL
     public List<Transaccion> obtenerHistorialUsuario(int usuarioId) {
-        return transaccionDAO.listarPorUsuario(usuarioId);
+        return transaccionDAO.obtenerPorUsuario(usuarioId);
     }
     
-    // OBTENER SALDO
-    public double obtenerSaldo(int usuarioId) {
-        Cartera cartera = carteraDAO.obtenerPorUsuario(usuarioId);
-        return cartera != null ? cartera.getSaldo() : 0.0;
+    public double obtenerTotalComisiones() {
+        return transaccionDAO.obtenerTotalComisiones();
+    }
+    
+    private boolean validarEdad(Usuario usuario, Videojuego videojuego) {
+        // Calcular edad del usuario
+        Date hoy = new Date();
+        long diff = hoy.getTime() - usuario.getFechaNacimiento().getTime();
+        long edad = diff / (1000L * 60 * 60 * 24 * 365);
+        
+        return edad >= videojuego.getEdadMinima();
+    }
+    
+    private Usuario obtenerUsuarioPorId(int id) {
+        // Este método sería implementado en UsuarioDAO
+        return null;
     }
 }

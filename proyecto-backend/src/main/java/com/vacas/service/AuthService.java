@@ -1,50 +1,49 @@
 package com.vacas.service;
 
+import org.mindrot.jbcrypt.BCrypt;
+
 import com.vacas.dao.UsuarioDAO;
 import com.vacas.model.Usuario;
 
 public class AuthService {
-    private UsuarioDAO usuarioDao;
+    private UsuarioDAO usuarioDAO;
     
     public AuthService() {
-        this.usuarioDao = new UsuarioDAO();
+        this.usuarioDAO = new UsuarioDAO();
     }
     
-    // Lógica de LOGIN
     public Usuario login(String correo, String password) {
-        Usuario usuario = usuarioDao.buscarPorCorreo(correo);
-        
-        if (usuario == null) {
-            System.out.println("Usuario no encontrado: " + correo);
-            return null;
-        }
-        
-        if (!usuario.isActivo()) {
-            System.out.println("Usuario inactivo: " + correo);
-            return null;
-        }
-        
-        if (!password.equals(usuario.getPassword())) {
-            System.out.println("Contraseña incorrecta para: " + correo);
-            return null;
-        }
-        
-        System.out.println("Login exitoso: " + usuario.getNickname());
-        return usuario;
+        return usuarioDAO.login(correo, password);
     }
     
-    // Lógica de REGISTRO
-    public boolean registrar(Usuario usuario) {
-        if (usuario.getCorreo() == null || usuario.getCorreo().isEmpty()) {
-            System.out.println("Correo requerido");
+    public boolean registrar(Usuario usuario, String password) {
+        if (usuarioDAO.existeCorreo(usuario.getCorreo())) {
             return false;
         }
         
-        if (usuario.getPassword() == null || usuario.getPassword().isEmpty()) {
-            System.out.println("Password requerido");
+        if (usuarioDAO.existeNickname(usuario.getNickname())) {
             return false;
         }
         
-        return usuarioDao.crear(usuario);
+        String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt(12));
+        usuario.setPassword(hashedPassword);
+        
+        return usuarioDAO.registrar(usuario);
+    }
+    
+    public boolean recargarSaldo(int usuarioId, double monto) {
+        if (monto <= 0) return false;
+        
+        Usuario usuario = obtenerUsuarioPorId(usuarioId);
+        if (usuario == null) return false;
+        
+        double nuevoSaldo = usuario.getSaldoCartera() + monto;
+        return usuarioDAO.actualizarSaldo(usuarioId, nuevoSaldo);
+    }
+    
+    public Usuario obtenerUsuarioPorId(int id) {
+        // Este método sería implementado en UsuarioDAO
+        // Por ahora retornamos null
+        return null;
     }
 }

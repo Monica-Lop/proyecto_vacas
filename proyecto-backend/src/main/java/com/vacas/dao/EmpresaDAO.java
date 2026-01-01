@@ -9,124 +9,91 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.vacas.model.Empresa;
-import com.vacas.util.ConexionBD;
+import com.vacas.utils.DatabaseConnection;
 
 public class EmpresaDAO {
-
-    // 1. Crear una nueva empresa
+    
     public boolean crear(Empresa empresa) {
-        String sql = "INSERT INTO empresa (nombre, descripcion, telefono, comision) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO empresa (nombre, descripcion, telefono, fecha_creacion) " +
+                    "VALUES (?, ?, ?, CURDATE())";
         
-        try (Connection conn = ConexionBD.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            ps.setString(1, empresa.getNombre());
-            ps.setString(2, empresa.getDescripcion());
-            ps.setString(3, empresa.getTelefono());
-            ps.setDouble(4, empresa.getComision());
+            stmt.setString(1, empresa.getNombre());
+            stmt.setString(2, empresa.getDescripcion());
+            stmt.setString(3, empresa.getTelefono());
             
-            int filas = ps.executeUpdate();
-            return filas > 0;
-            
+            return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Error al crear empresa: " + e.getMessage());
             e.printStackTrace();
-            return false;
         }
+        return false;
     }
-
-    // 2. Listar todas las empresas
-    public List<Empresa> listarTodas() {
+    
+    public List<Empresa> obtenerTodas() {
         List<Empresa> empresas = new ArrayList<>();
-        String sql = "SELECT * FROM empresa";
+        String sql = "SELECT id, nombre, descripcion, telefono, politica_comentarios, " +
+                    "fecha_creacion FROM empresa";
         
-        try (Connection conn = ConexionBD.getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             
             while (rs.next()) {
-                Empresa emp = new Empresa();
-                emp.setId(rs.getInt("id"));
-                emp.setNombre(rs.getString("nombre"));
-                emp.setDescripcion(rs.getString("descripcion"));
-                emp.setTelefono(rs.getString("telefono"));
-                emp.setComision(rs.getDouble("comision"));
-                empresas.add(emp);
-            }
-            
-        } catch (SQLException e) {
-            System.err.println("Error al listar empresas: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return empresas;
-    }
-
-    // 3. Buscar empresa por ID
-    public Empresa buscarPorId(int id) {
-        Empresa empresa = null;
-        String sql = "SELECT * FROM empresa WHERE id = ?";
-        
-        try (Connection conn = ConexionBD.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            
-            ps.setInt(1, id);
-            ResultSet rs = ps.executeQuery();
-            
-            if (rs.next()) {
-                empresa = new Empresa();
+                Empresa empresa = new Empresa();
                 empresa.setId(rs.getInt("id"));
                 empresa.setNombre(rs.getString("nombre"));
                 empresa.setDescripcion(rs.getString("descripcion"));
                 empresa.setTelefono(rs.getString("telefono"));
-                empresa.setComision(rs.getDouble("comision"));
+                empresa.setPoliticaComentarios(rs.getString("politica_comentarios"));
+                empresa.setFechaCreacion(rs.getDate("fecha_creacion"));
+                empresas.add(empresa);
             }
-            rs.close();
-            
         } catch (SQLException e) {
-            System.err.println("Error al buscar empresa por ID: " + e.getMessage());
             e.printStackTrace();
         }
-        return empresa;
+        return empresas;
     }
-
-    // 4. Actualizar empresa
-    public boolean actualizar(Empresa empresa) {
-        String sql = "UPDATE empresa SET nombre = ?, descripcion = ?, telefono = ?, comision = ? WHERE id = ?";
+    
+    public Empresa obtenerPorId(int id) {
+        String sql = "SELECT id, nombre, descripcion, telefono, politica_comentarios, " +
+                    "fecha_creacion FROM empresa WHERE id = ?";
         
-        try (Connection conn = ConexionBD.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            ps.setString(1, empresa.getNombre());
-            ps.setString(2, empresa.getDescripcion());
-            ps.setString(3, empresa.getTelefono());
-            ps.setDouble(4, empresa.getComision());
-            ps.setInt(5, empresa.getId());
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
             
-            int filas = ps.executeUpdate();
-            return filas > 0;
-            
+            if (rs.next()) {
+                Empresa empresa = new Empresa();
+                empresa.setId(rs.getInt("id"));
+                empresa.setNombre(rs.getString("nombre"));
+                empresa.setDescripcion(rs.getString("descripcion"));
+                empresa.setTelefono(rs.getString("telefono"));
+                empresa.setPoliticaComentarios(rs.getString("politica_comentarios"));
+                empresa.setFechaCreacion(rs.getDate("fecha_creacion"));
+                return empresa;
+            }
         } catch (SQLException e) {
-            System.err.println("Error al actualizar empresa: " + e.getMessage());
             e.printStackTrace();
-            return false;
         }
+        return null;
     }
-
-    // 5. Eliminar empresa (cambiar estado si es necesario, pero aquí eliminaremos físicamente)
-    public boolean eliminar(int id) {
-        String sql = "DELETE FROM empresa WHERE id = ?";
+    
+    public boolean existeNombre(String nombre) {
+        String sql = "SELECT id FROM empresa WHERE nombre = ?";
         
-        try (Connection conn = ConexionBD.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            ps.setInt(1, id);
-            int filas = ps.executeUpdate();
-            return filas > 0;
-            
+            stmt.setString(1, nombre);
+            ResultSet rs = stmt.executeQuery();
+            return rs.next();
         } catch (SQLException e) {
-            System.err.println("Error al eliminar empresa: " + e.getMessage());
             e.printStackTrace();
-            return false;
         }
+        return false;
     }
 }
