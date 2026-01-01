@@ -72,5 +72,24 @@ public class BibliotecaDAO {
             e.printStackTrace();
         }
         return false;
+}
+
+public boolean agregar(int usuarioId, int videojuegoId, Connection conn) throws SQLException {
+    String sql = "INSERT INTO biblioteca (usuario_id, videojuego_id, fecha_agregado) VALUES (?, ?, CURDATE())";
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        stmt.setInt(1, usuarioId);
+        stmt.setInt(2, videojuegoId);
+        return stmt.executeUpdate() > 0;
     }
+}
+
+public boolean existe(int usuarioId, int videojuegoId, Connection conn) throws SQLException {
+    String sql = "SELECT id FROM biblioteca WHERE usuario_id = ? AND videojuego_id = ?";
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        stmt.setInt(1, usuarioId);
+        stmt.setInt(2, videojuegoId);
+        ResultSet rs = stmt.executeQuery();
+        return rs.next();
+    }
+}
 }

@@ -13,6 +13,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession; // ✅ IMPORT AÑADIDO
 
 @WebServlet("/api/categorias/*")
 public class CategoriaServlet extends HttpServlet {
@@ -80,18 +81,5 @@ public class CategoriaServlet extends HttpServlet {
             e.printStackTrace();
         }
         out.flush();
-    }
-}
-
-// CategoriaService.java (añadir al archivo de servicios)
-class CategoriaService {
-    private com.vacas.dao.CategoriaDAO categoriaDAO = new com.vacas.dao.CategoriaDAO();
-    
-    public List<Categoria> obtenerTodas() {
-        return categoriaDAO.obtenerTodas();
-    }
-    
-    public boolean crear(Categoria categoria) {
-        return categoriaDAO.crear(categoria);
     }
 }

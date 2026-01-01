@@ -91,15 +91,14 @@ public class TransaccionServlet extends HttpServlet {
             Date fechaCompra;
             
             if (fechaCompraStr != null && !fechaCompraStr.isEmpty()) {
-                // Si se proporciona fecha, usarla (para simulación)
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                sdf.setLenient(false); // Validación estricta
                 fechaCompra = sdf.parse(fechaCompraStr);
             } else {
-                // Si no, usar fecha actual
                 fechaCompra = new Date();
             }
             
-            // Realizar compra
+    
             boolean compraExitosa = transaccionService.comprarVideojuego(usuarioId, videojuegoId, fechaCompra);
             
             if (compraExitosa) {
@@ -110,7 +109,7 @@ public class TransaccionServlet extends HttpServlet {
             }
         } catch (ParseException e) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            out.print("{\"success\": false, \"message\": \"Formato de fecha inválido\"}");
+            out.print("{\"success\": false, \"message\": \"Formato de fecha inválido. Use yyyy-MM-dd\"}");
         } catch (NumberFormatException e) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             out.print("{\"success\": false, \"message\": \"ID inválido\"}");

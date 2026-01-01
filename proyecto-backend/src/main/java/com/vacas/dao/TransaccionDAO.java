@@ -80,4 +80,19 @@ public class TransaccionDAO {
         }
         return 0.0;
     }
+
+    public boolean crear(Transaccion transaccion, Connection conn) throws SQLException {
+    String sql = "INSERT INTO transaccion (usuario_id, videojuego_id, fecha_compra, " +
+                "precio_pagado, monto_comision, tipo_comision, fecha_registro) " +
+                "VALUES (?, ?, ?, ?, ?, ?, CURDATE())";
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        stmt.setInt(1, transaccion.getUsuarioId());
+        stmt.setInt(2, transaccion.getVideojuegoId());
+        stmt.setDate(3, new java.sql.Date(transaccion.getFechaCompra().getTime()));
+        stmt.setDouble(4, transaccion.getPrecioPagado());
+        stmt.setDouble(5, transaccion.getMontoComision());
+        stmt.setString(6, transaccion.getTipoComision());
+        return stmt.executeUpdate() > 0;
+    }
+}
 }

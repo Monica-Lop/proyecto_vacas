@@ -99,22 +99,3 @@ public class EmpresaServlet extends HttpServlet {
     }
 }
 
-// EmpresaService.java (añadir al archivo de servicios)
-class EmpresaService {
-    private com.vacas.dao.EmpresaDAO empresaDAO = new com.vacas.dao.EmpresaDAO();
-    
-    public boolean crear(Empresa empresa) {
-        if (empresaDAO.existeNombre(empresa.getNombre())) {
-            return false;
-        }
-        return empresaDAO.crear(empresa);
-    }
-    
-    public List<Empresa> obtenerTodas() {
-        return empresaDAO.obtenerTodas();
-    }
-    
-    public Empresa obtenerPorId(int id) {
-        return empresaDAO.obtenerPorId(id);
-    }
-}

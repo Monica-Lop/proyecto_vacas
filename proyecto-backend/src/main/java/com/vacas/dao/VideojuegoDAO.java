@@ -151,4 +151,35 @@ public class VideojuegoDAO {
         }
         return false;
     }
+
+    // MÉTODO NUEVO: Para usar en transacciones
+public Videojuego obtenerPorId(int id, Connection conn) throws SQLException {
+    String sql = "SELECT id, titulo, descripcion, precio, requisitos, edad_minima, " +
+                "disponible, fecha_lanzamiento, calificacion_promedio, " +
+                "comentarios_habilitados, empresa_id, fecha_creacion " +
+                "FROM videojuego WHERE id = ?";
+    
+    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        stmt.setInt(1, id);
+        ResultSet rs = stmt.executeQuery();
+        
+        if (rs.next()) {
+            Videojuego videojuego = new Videojuego();
+            videojuego.setId(rs.getInt("id"));
+            videojuego.setTitulo(rs.getString("titulo"));
+            videojuego.setDescripcion(rs.getString("descripcion"));
+            videojuego.setPrecio(rs.getDouble("precio"));
+            videojuego.setRequisitos(rs.getString("requisitos"));
+            videojuego.setEdadMinima(rs.getInt("edad_minima"));
+            videojuego.setDisponible(rs.getBoolean("disponible"));
+            videojuego.setFechaLanzamiento(rs.getDate("fecha_lanzamiento"));
+            videojuego.setCalificacionPromedio(rs.getDouble("calificacion_promedio"));
+            videojuego.setComentariosHabilitados(rs.getBoolean("comentarios_habilitados"));
+            videojuego.setEmpresaId(rs.getInt("empresa_id"));
+            videojuego.setFechaCreacion(rs.getDate("fecha_creacion"));
+            return videojuego;
+        }
+    }
+    return null;
+}
 }
